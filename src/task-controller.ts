@@ -6,14 +6,14 @@ import { TaskExecutorDelegate } from "./task-handlers";
 export class TaskController<T = void> {
     private readonly _tasks: Set<Task<T>>;
     private readonly _deferred: Deferred;
-    private readonly _resolved: EventEmitter<T>;
-    private readonly _rejected: EventEmitter<T>;
+    private readonly _resolved: EventEmitter<[T]>;
+    private readonly _rejected: EventEmitter<[T]>;
 
     get remaing(): number { return this._tasks.size; }
 
-    get resolved(): IEvent<T> { return this._resolved.event; }
+    get resolved(): IEvent<[T]> { return this._resolved.event; }
 
-    get rejected(): IEvent<T> { return this._rejected.event; }
+    get rejected(): IEvent<[any]> { return this._rejected.event; }
 
     constructor(tasks?: Iterable<Task<T>>) {
         this._tasks = new Set();
@@ -51,10 +51,10 @@ export class TaskController<T = void> {
         this._tasks.add(task);
         try {
             const result = await task.run();
-            this._resolved.trigger(result);
+            this._resolved.emit(result);
         }
         catch (err) {
-            this._rejected.trigger(err);
+            this._rejected.emit(err);
             this._deferred.reject(err);
         }
         finally {
