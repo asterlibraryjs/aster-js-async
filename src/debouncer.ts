@@ -20,8 +20,23 @@ export class Debouncer<TArgs extends [...any, AbortToken?] = [], TResult = any> 
         this._running = Deferred.resolve<void>(void 0);
     }
 
-    invoke(...args: TArgs): Promise<TResult> {
+    tryInvoke(...args: TArgs): Promise<PromiseSettledResult<TResult>> {
         // Keep a reference to the original awaiter to avoid getting the reset one
+        const awaiter = this._running.getAwaiter();
+        return this.tryInvokeCore(args, awaiter, this._version);
+    }
+
+    private async tryInvokeCore(args: TArgs, running: Promise<void>, version: number): Promise<PromiseSettledResult<TResult>> {
+        try {
+            const value = await this.invokeCore(args, running, version);
+            return { status: "fulfilled", value };
+        }
+        catch (err) {
+            return { status: "rejected", reason: err };
+        }
+    }
+
+    invoke(...args: TArgs): Promise<TResult> {
         const awaiter = this._running.getAwaiter();
         return this.invokeCore(args, awaiter, this._version);
     }
@@ -45,7 +60,6 @@ export class Debouncer<TArgs extends [...any, AbortToken?] = [], TResult = any> 
     }
 
     cancel(): void {
-        console.warn(this._version, "cancel")
         const error = new Error("Operation cancelled");
 
         this._result.reject(error);
