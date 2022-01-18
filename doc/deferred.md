@@ -21,3 +21,7 @@ class Sample<T> {
     }
 }
 ```
+
+## Implements
+
+- `IDisposable` from `@aster-js/core`

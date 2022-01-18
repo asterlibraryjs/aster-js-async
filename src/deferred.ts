@@ -47,18 +47,20 @@ export class Deferred<T = void> implements PromiseLike<T>, IDisposable {
         return false;
     }
 
-    reset(): void {
-        IDisposable.checkDisposed(this);
+    reset(force?: boolean): void {
+        if (force || this._state & DeferredState.completed) {
+            IDisposable.checkDisposed(this);
 
-        if (!this._state && this._rejectCallback) {
-            const err = new DeferredError("Operation cancelled");
-            this._rejectCallback(err);
+            if (!this._state && this._rejectCallback) {
+                const err = new DeferredError("Operation cancelled");
+                this._rejectCallback(err);
+            }
+            this._state = 0;
+
+            delete this._promiseOrResult;
+            delete this._resolveCallback;
+            delete this._rejectCallback;
         }
-        this._state = 0;
-
-        delete this._promiseOrResult;
-        delete this._resolveCallback;
-        delete this._rejectCallback;
     }
 
     async then<TFulfill = T, TReject = never>(
@@ -72,14 +74,36 @@ export class Deferred<T = void> implements PromiseLike<T>, IDisposable {
             if (onfulfilled) return onfulfilled(this._promiseOrResult as T);
         }
         if (this._state & DeferredState.faulted) {
-            if (onrejected)  return onrejected(this._promiseOrResult);
+            if (onrejected) return onrejected(this._promiseOrResult);
         }
 
-        this._promiseOrResult = new Promise<T>((resolve, reject) => {
+        return this.initAwaiter().then(onfulfilled, onrejected);
+    }
+
+    /**
+     * Transform current instance into a native promise
+     * > This method should be used carefully
+     */
+    getAwaiter(): Promise<T> {
+        if (this._promiseOrResult instanceof Promise) {
+            return this._promiseOrResult;
+        }
+        if (this._state & DeferredState.succeed) {
+            return Promise.resolve(this._promiseOrResult as T);
+        }
+        if (this._state & DeferredState.faulted) {
+            return Promise.reject(this._promiseOrResult);
+        }
+        return this.initAwaiter();
+    }
+
+    private initAwaiter(): Promise<T> {
+        const promise = new Promise<T>((resolve, reject) => {
             this._resolveCallback = resolve;
             this._rejectCallback = reject;
         });
-        return this._promiseOrResult.then(onfulfilled, onrejected);
+        this._promiseOrResult = promise;
+        return promise;
     }
 
     [IDisposable.dispose](): void {

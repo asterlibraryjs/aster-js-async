@@ -18,7 +18,7 @@ async function update({ data, children }: CustomData, token: AbortToken): Promis
     if(token.aborted) {
         await fetch(`/data/${created.id}`, { method: "DELETE" });
         return false;
-    } 
+    }
 
     // If not, we append its children
     await fetch(`/data/${created.id}/children`, { method: "POST", body: JSON.stringify(children) });
@@ -31,4 +31,5 @@ async function update({ data, children }: CustomData, token: AbortToken): Promis
 
 - [Deferred](./doc/deferred.md)
 - [Delayed](./doc/delayed.md)
+- [Debouncer](./doc/debouncer.md)
 - [Task](./doc/task.md)
