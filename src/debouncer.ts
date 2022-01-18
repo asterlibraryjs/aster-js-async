@@ -60,8 +60,9 @@ export class Debouncer<TArgs extends [...any, AbortToken?] = [], TResult = any> 
     }
 
     cancel(): void {
-        const error = new Error("Operation cancelled");
+        clearTimeout(this._timer);
 
+        const error = new Error("Operation cancelled");
         this._result.reject(error);
         // Reject pending ones
         this._running.reset(true);
