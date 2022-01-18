@@ -1,5 +1,6 @@
 export * from "./deferred";
 export * from "./delayed";
+export * from "./debouncer";
 export * from "./abort-token";
 export * from "./helper";
 export * from "./task";

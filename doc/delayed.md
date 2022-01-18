@@ -19,7 +19,7 @@ class HttpClient {
         const token = await this._token.get();
         const res = await fetch(url, {
             method: "GET",
-            headers: { "Authorization": `Bearer ${token}` } 
+            headers: { "Authorization": `Bearer ${token}` }
         });
         return await res.json();
     }
@@ -36,4 +36,4 @@ class HttpClient {
 
 ## Implements
 
-- [IDisposable](./disposable.md)
+- `IDisposable` from `@aster-js/core`

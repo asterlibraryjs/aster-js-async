@@ -1,6 +1,6 @@
 {
   "name": "@aster-js/async",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Aster async library part of Aster js library",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -25,7 +25,7 @@
   "homepage": "https://github.com/asterlibraryjs/aster-js-async#readme",
   "license": "ISC",
   "dependencies": {
-    "@aster-js/core": "^1.1.0",
+    "@aster-js/core": "^1.2.1",
     "@aster-js/events": "^1.0.1",
     "tslib": "^2.1.0"
   },

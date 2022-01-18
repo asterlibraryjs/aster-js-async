@@ -7,13 +7,13 @@ export class TaskController<T = void> {
     private readonly _tasks: Set<Task<T>>;
     private readonly _deferred: Deferred;
     private readonly _resolved: EventEmitter<[T]>;
-    private readonly _rejected: EventEmitter<[T]>;
+    private readonly _rejected: EventEmitter<[unknown]>;
 
     get remaing(): number { return this._tasks.size; }
 
     get resolved(): IEvent<[T]> { return this._resolved.event; }
 
-    get rejected(): IEvent<[any]> { return this._rejected.event; }
+    get rejected(): IEvent<[unknown]> { return this._rejected.event; }
 
     constructor(tasks?: Iterable<Task<T>>) {
         this._tasks = new Set();
@@ -29,7 +29,7 @@ export class TaskController<T = void> {
     run(task: Task<T>): void;
     run(task: TaskExecutorDelegate<T>, thisArg?: any): void;
     run(task: Task<T> | TaskExecutorDelegate<T>, thisArg?: any): void {
-        if (this._deferred.succeed) this._deferred.reset();
+        this._deferred.reset();
         if (task instanceof Task) {
             this.addAndRun(task);
         }
