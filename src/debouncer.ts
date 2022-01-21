@@ -1,34 +1,36 @@
-import { IDisposable, Func } from "@aster-js/core";
-import { AbortToken } from "./abort-token";
+import { Func, Disposable } from "@aster-js/core";
 import { Deferred } from "./deferred";
-import { AsyncHelper } from "./helper";
+import { timeout } from "./helpers";
 
-export class Debouncer<TArgs extends [...any, AbortToken?] = [], TResult = any> implements IDisposable {
+export type DebouncerOptions = {
+    readonly delay: number;
+    readonly overdue: number;
+    readonly timeout: number;
+}
+
+export class Debouncer<TArgs extends any[] = [], TResult = any> extends Disposable {
     private readonly _callback: Func<TArgs, Promise<TResult>>;
-    private readonly _result: Deferred<TResult>;
-    private readonly _running: Deferred;
-    private readonly _delay: number;
-    private readonly _timeout: number;
+    private readonly _options: DebouncerOptions;
     private _timer: number = 0;
-    private _version: number = 0;
 
-    constructor(callback: Func<TArgs, Promise<TResult>>, delay: number, timeout: number = -1) {
-        this._delay = delay;
+    private _nextResult: Deferred<TResult> = new Deferred();
+    private _nextArgs: TArgs | null = null;
+    private _nextOverdue: number = -1;
+
+    private _pendingResult: Deferred<TResult> = new Deferred();
+    private _pendingArgs: TArgs | null = null;
+
+    private _running: boolean = false;
+
+    constructor(callback: Func<TArgs, Promise<TResult>>, options: Partial<DebouncerOptions> = {}) {
+        super();
         this._callback = callback;
-        this._timeout = timeout;
-        this._result = new Deferred();
-        this._running = Deferred.resolve<void>(void 0);
+        this._options = { delay: 100, overdue: -1, timeout: -1, ...options };
     }
 
-    tryInvoke(...args: TArgs): Promise<PromiseSettledResult<TResult>> {
-        // Keep a reference to the original awaiter to avoid getting the reset one
-        const awaiter = this._running.getAwaiter();
-        return this.tryInvokeCore(args, awaiter, this._version);
-    }
-
-    private async tryInvokeCore(args: TArgs, running: Promise<void>, version: number): Promise<PromiseSettledResult<TResult>> {
+    async tryInvoke(...args: TArgs): Promise<PromiseSettledResult<TResult>> {
         try {
-            const value = await this.invokeCore(args, running, version);
+            const value = await this.invoke(...args);
             return { status: "fulfilled", value };
         }
         catch (err) {
@@ -36,71 +38,87 @@ export class Debouncer<TArgs extends [...any, AbortToken?] = [], TResult = any> 
         }
     }
 
-    invoke(...args: TArgs): Promise<TResult> {
-        const awaiter = this._running.getAwaiter();
-        return this.invokeCore(args, awaiter, this._version);
+    async invoke(...args: TArgs): Promise<TResult> {
+        if (this.isOverdue() || this._running) {
+            this._pendingArgs = args;
+            return await this._pendingResult;
+        }
+
+        this._nextArgs = args;
+        this.scheduleNext();
+        return await this._nextResult;
     }
 
-    private async invokeCore(args: TArgs, running: Promise<void>, version: number): Promise<TResult> {
-        await Promise.resolve();
-
-        this.checkVersion(version);
-
-        const abortToken = args[args.length - 1] as AbortToken;
-
-        await running;
-        abortToken.throwIfAborted();
-        version = this._version;
+    private scheduleNext(): void {
+        if (this._nextOverdue === -1 && this._options.overdue !== -1) {
+            this._nextOverdue = Date.now() + this._options.overdue;
+        }
 
         clearTimeout(this._timer);
-        this._result.reset();
-
-        this._timer = window.setTimeout(() => this.invokeCallback(args, version), this._delay)
-        return await this._result;
+        this._timer = window.setTimeout(() => this.invokeCallback(), this._options.delay);
     }
 
     cancel(): void {
         clearTimeout(this._timer);
 
-        const error = new Error("Operation cancelled");
-        this._result.reject(error);
-        // Reject pending ones
-        this._running.reset(true);
+        if (!this._running) {
+            const error = new Error("Operation cancelled");
+            this._nextResult.reject(error);
+        }
 
-        this.reset(this._version);
+        if (this._pendingArgs) {
+            const error = new Error("Operation cancelled");
+            this._pendingResult.reject(error);
+
+            this._pendingResult = new Deferred();
+            this._pendingArgs = null;
+        }
+
+        this.reset();
     }
 
-    private async invokeCallback(args: TArgs, version: number): Promise<void> {
-        this._running.reset();
-        try {
-            const task = this._callback(...args);
-            const result = await AsyncHelper.timeout(task, this._timeout);
+    private async invokeCallback(): Promise<void> {
+        if (!this._nextArgs) return;
 
-            if (version === this._version) this._result.resolve(result);
+        this._running = true;
+
+        const task = this._callback(...this._nextArgs);
+        const result = await timeout(task, this._options.timeout);
+        switch (result.status) {
+            case "fulfilled":
+                this._nextResult.resolve(result.value);
+                break;
+            case "rejected":
+                this._nextResult.reject(result.reason);
+                break;
+            case "timeout":
+                const error = new Error("Operation cancelled");
+                this._nextResult.reject(error);
+                break;
         }
-        catch (err) {
-            if (version === this._version) this._result.reject(err);
-        }
-        finally {
-            this.reset(version);
-        }
+
+        this._running = false;
+
+        this.reset();
     }
 
-    private reset(version: number): void {
-        if (version === this._version) {
-            this._version++;
-            this._running.resolve();
-            this._result.reset();
-        }
+    private isOverdue(): boolean {
+        return this._nextOverdue !== -1 && this._nextOverdue < Date.now();
     }
 
-    private checkVersion(expected: number): void {
-        if (expected !== this._version) throw new Error("Operation cancelled");
+    private reset(): void {
+        this._nextOverdue = -1;
+
+        this._nextResult = this._pendingResult;
+        this._nextArgs = this._pendingArgs;
+
+        this._pendingResult = new Deferred();
+        this._pendingArgs = null;
+
+        if (this._nextArgs) this.scheduleNext();
     }
 
-    [IDisposable.dispose](): void {
-        clearTimeout(this._timer);
-        this._result.reset(true);
-        this._running.reset(true);
+    protected dispose(): void {
+        this.cancel();
     }
 }
