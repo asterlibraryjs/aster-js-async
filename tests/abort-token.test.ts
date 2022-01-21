@@ -1,5 +1,4 @@
 import { assert } from "chai";
-import { assert as sassert, spy } from "sinon";
 import { AbortToken } from "../src";
 
 describe("AbortToken", () => {

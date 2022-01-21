@@ -12,21 +12,26 @@ const enum DeferredState {
 
 export class Deferred<T = void> implements PromiseLike<T>, IDisposable {
     private _state: DeferredState = 0;
+    private _version: number = 0;
     private _promiseOrResult?: T | Promise<T> | Error;
     private _resolveCallback?: (value: T | PromiseLike<T>) => void;
     private _rejectCallback?: (reason?: any) => void;
 
-    get idle() { return this._state === 0; }
+    get version(): number { return this._version; }
 
-    get completed() { return Boolean(this._state & DeferredState.completed); }
+    get idle(): boolean { return this._state === 0; }
 
-    get succeed() { return Boolean(this._state & DeferredState.succeed); }
+    get completed(): boolean { return Boolean(this._state & DeferredState.completed); }
 
-    get faulted() { return Boolean(this._state & DeferredState.faulted); }
+    get succeed(): boolean { return Boolean(this._state & DeferredState.succeed); }
 
-    get disposed() { return Boolean(this._state & DeferredState.disposed); }
+    get faulted(): boolean { return Boolean(this._state & DeferredState.faulted); }
+
+    get disposed(): boolean { return Boolean(this._state & DeferredState.disposed); }
 
     resolve(value: T): boolean {
+        IDisposable.checkDisposed(this);
+
         if (!this._state) {
             this._state = DeferredState.completed | DeferredState.succeed;
             this._promiseOrResult = value;
@@ -37,6 +42,8 @@ export class Deferred<T = void> implements PromiseLike<T>, IDisposable {
     }
 
     reject(reason?: any): boolean {
+        IDisposable.checkDisposed(this);
+
         if (!this._state) {
             this._state = DeferredState.completed | DeferredState.faulted;
             const error = reason instanceof Error ? reason : new DeferredError(reason);
@@ -47,20 +54,43 @@ export class Deferred<T = void> implements PromiseLike<T>, IDisposable {
         return false;
     }
 
-    reset(force?: boolean): void {
-        if (force || this._state & DeferredState.completed) {
-            IDisposable.checkDisposed(this);
+    cancel(): boolean {
+        IDisposable.checkDisposed(this);
 
+        if (!this._state){
+            this.resetCore();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Reset current deferred into idle state and rejecting any pending promise
+     * > To avoid rejecting pending promise, use cancel
+     * @param force Reset current promise and get a new one even if its not completed
+     */
+    reset(force?: boolean): void {
+        IDisposable.checkDisposed(this);
+
+        if (force) {
             if (!this._state && this._rejectCallback) {
                 const err = new DeferredError("Operation cancelled");
                 this._rejectCallback(err);
             }
-            this._state = 0;
-
-            delete this._promiseOrResult;
-            delete this._resolveCallback;
-            delete this._rejectCallback;
+            this.resetCore();
         }
+        else if (this._state) {
+            this.resetCore();
+        }
+    }
+
+    private resetCore(): void {
+        this._version++;
+        this._state = 0;
+
+        delete this._promiseOrResult;
+        delete this._resolveCallback;
+        delete this._rejectCallback;
     }
 
     async then<TFulfill = T, TReject = never>(
