@@ -20,6 +20,7 @@
         "strict": true,
         "inlineSourceMap": true,
         "inlineSources": true,
+        "importsNotUsedAsValues": "error",
         "lib": [
             "esnext",
             "dom",

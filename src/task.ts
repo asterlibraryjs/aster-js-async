@@ -2,8 +2,8 @@ import { Disposable, IDisposable } from "@aster-js/core";
 import { AbortableToken, AbortToken } from "./abort-token";
 import { Deferred } from "./deferred";
 import { DelayedTaskHandler } from "./task-handlers/delayed-task-handler";
-import { DelegatingTaskHandler, DelegatingTaskHandlerConstructor } from "./task-handlers/delegating-task-handler";
-import { ITaskHandler, TaskExecutorDelegate } from "./task-handlers/itask-handler";
+import type { DelegatingTaskHandler, DelegatingTaskHandlerConstructor } from "./task-handlers/delegating-task-handler";
+import type { ITaskHandler, TaskExecutorDelegate } from "./task-handlers/itask-handler";
 import { TaskExecutorHandler } from "./task-handlers/task-executor-handler";
 import { TimeoutTaskHandler } from "./task-handlers/timeout-task-handler";
 
@@ -65,6 +65,18 @@ export class Task<T = void> extends Disposable implements PromiseLike<T>  {
     protected dispose(): void {
         IDisposable.safeDispose(this._deferred);
         IDisposable.safeDispose(this._token);
+    }
+
+    static completed<T>(value: T): Task<T> {
+        const task = new Task<T>(() => value);
+        task._deferred.resolve(value);
+        return task;
+    }
+
+    static faulted<T>(err?: unknown): Task<T> {
+        const task = new Task<T>(() => { throw err; });
+        task._deferred.reject(err);
+        return task;
     }
 
     static run<T>(executor: TaskExecutorDelegate<T>, timeout?: number, token?: AbortToken): Task<T> {
