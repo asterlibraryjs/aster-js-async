@@ -1,7 +1,7 @@
 import { EventEmitter, IEvent } from "@aster-js/events";
 import { Deferred } from "./deferred";
 import { Task } from "./task";
-import { TaskExecutorDelegate } from "./task-handlers";
+import type { TaskExecutorDelegate } from "./task-handlers";
 
 export class TaskController<T = void> {
     private readonly _tasks: Set<Task<T>>;

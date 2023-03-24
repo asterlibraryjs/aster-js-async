@@ -1,4 +1,5 @@
 import { DisposedError, IDisposable } from "@aster-js/core";
+import type { AsyncResult } from "./iasync-result";
 
 export class DeferredError extends Error { }
 
@@ -10,7 +11,7 @@ const enum DeferredState {
     disposed = 0x8
 }
 
-export class Deferred<T = void> implements PromiseLike<T>, IDisposable {
+export class Deferred<T = void> implements AsyncResult<T>, IDisposable {
     private _state: DeferredState = 0;
     private _version: number = 0;
     private _promiseOrResult?: T | Promise<T> | Error;
@@ -108,6 +109,24 @@ export class Deferred<T = void> implements PromiseLike<T>, IDisposable {
         }
 
         return this.initAwaiter().then(onfulfilled, onrejected);
+    }
+
+    async catch<TResult = never>(
+        onrejected: (reason: any) => TResult | PromiseLike<TResult>
+    ): Promise<T | TResult> {
+        try {
+            return await this;
+        } catch (err) {
+            return await onrejected(err);
+        }
+    }
+
+    async finally(onfinally: () => void): Promise<T> {
+        try {
+            return await this;
+        } finally {
+            onfinally();
+        }
     }
 
     /**

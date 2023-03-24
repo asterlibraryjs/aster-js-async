@@ -1,4 +1,4 @@
-import { AbortToken } from "../abort-token";
+import type { AbortToken } from "../abort-token";
 
 export type TaskExecutorDelegate<T> = (token: AbortToken) => T | Promise<T>;
 
