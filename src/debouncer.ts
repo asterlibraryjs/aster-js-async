@@ -10,7 +10,7 @@ export type DebouncerOptions = {
 }
 
 export class Debouncer<TArgs extends any[] = [], TResult = any> extends Disposable {
-    private readonly _callback: Func<TArgs, Promise<TResult>>;
+    private readonly _callback: Func<TArgs, Promise<TResult> | TResult>;
     private readonly _options: DebouncerOptions;
     private _timeoutSource: TimeoutSource;
 
@@ -25,7 +25,7 @@ export class Debouncer<TArgs extends any[] = [], TResult = any> extends Disposab
 
     get hasPendingCall(): boolean { return Boolean(this._nextArgs); }
 
-    constructor(callback: Func<TArgs, Promise<TResult>>, options: Partial<DebouncerOptions> = {}) {
+    constructor(callback: Func<TArgs, Promise<TResult> | TResult>, options: Partial<DebouncerOptions> = {}) {
         super();
         this._callback = callback;
         this._options = { delay: 100, overdue: -1, timeout: -1, ...options };
@@ -33,6 +33,14 @@ export class Debouncer<TArgs extends any[] = [], TResult = any> extends Disposab
         this.registerForDispose(
             this._timeoutSource = new TimeoutSource()
         );
+    }
+
+    /**
+     * Begin invoke the debounced method.
+     * This method exists to avoid awaiting the promise and avoid linter errors
+     */
+    beginInvoke(...args: TArgs): void {
+        this.invokeCore(args);
     }
 
     async invoke(...args: TArgs): Promise<TResult> {
@@ -94,7 +102,7 @@ export class Debouncer<TArgs extends any[] = [], TResult = any> extends Disposab
 
         this._running = true;
 
-        const task = this._callback(...this._nextArgs);
+        const task = this.runTask(this._nextArgs);
         const result = await timeout(task, this._options.timeout);
 
         this._nextResult.resolve(result);
@@ -102,6 +110,10 @@ export class Debouncer<TArgs extends any[] = [], TResult = any> extends Disposab
         this._running = false;
 
         this.reset();
+    }
+
+    private async runTask(args: TArgs): Promise<TResult>{
+        return this._callback(...args);
     }
 
     private isOverdue(): boolean {
