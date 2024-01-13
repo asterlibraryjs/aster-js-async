@@ -1,5 +1,5 @@
-import { AbortToken } from "../abort-token";
-import { ITaskHandler, TaskExecutorDelegate } from "./itask-handler";
+import type { AbortToken } from "../abort-token";
+import type { ITaskHandler, TaskExecutorDelegate } from "./itask-handler";
 
 
 export class TaskExecutorHandler<T> implements ITaskHandler<T>{

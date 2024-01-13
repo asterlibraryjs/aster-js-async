@@ -1,6 +1,6 @@
 import { AbortToken } from "../abort-token";
 import { DelegatingTaskHandler } from "./delegating-task-handler";
-import { ITaskHandler } from "./itask-handler";
+import type { ITaskHandler } from "./itask-handler";
 
 export class TimeoutTaskHandler<T> extends DelegatingTaskHandler<T> {
 

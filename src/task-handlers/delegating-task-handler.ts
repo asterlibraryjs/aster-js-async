@@ -1,5 +1,5 @@
-import { AbortToken } from "../abort-token";
-import { ITaskHandler } from "./itask-handler";
+import type { AbortToken } from "../abort-token";
+import type { ITaskHandler } from "./itask-handler";
 
 export interface DelegatingTaskHandlerConstructor<T extends DelegatingTaskHandler = DelegatingTaskHandler, TArgs extends any[] = any[]> {
     new(innerHandler: ITaskHandler, ...args: TArgs): T;

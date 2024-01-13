@@ -1,4 +1,3 @@
-
 import { IDisposable } from "@aster-js/core";
 import { Deferred } from "./deferred";
 
