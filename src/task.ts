@@ -1,4 +1,4 @@
-import { Disposable, IDisposable } from "@aster-js/core";
+import { DisposableHost, IDisposable } from "@aster-js/core";
 import { AbortableToken, AbortToken } from "./abort-token";
 import { Deferred } from "./deferred";
 import { DelayedTaskHandler } from "./task-handlers/delayed-task-handler";
@@ -7,7 +7,7 @@ import type { ITaskHandler, TaskExecutorDelegate } from "./task-handlers/itask-h
 import { TaskExecutorHandler } from "./task-handlers/task-executor-handler";
 import { TimeoutTaskHandler } from "./task-handlers/timeout-task-handler";
 
-export class Task<T = void> extends Disposable implements PromiseLike<T>  {
+export class Task<T = void> extends DisposableHost implements PromiseLike<T>  {
     private readonly _deferred: Deferred<T>;
     private _taskHandler: ITaskHandler<T>;
     private _token?: AbortableToken;
