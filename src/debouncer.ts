@@ -1,4 +1,4 @@
-import { Func, Disposable } from "@aster-js/core";
+import { Func, DisposableHost } from "@aster-js/core";
 import { Deferred } from "./deferred";
 import { timeout, TimeoutResult } from "./helpers";
 import { TimeoutSource } from "./timeout-source";
@@ -9,7 +9,7 @@ export type DebouncerOptions = {
     readonly timeout: number;
 }
 
-export class Debouncer<TArgs extends any[] = [], TResult = any> extends Disposable {
+export class Debouncer<TArgs extends any[] = [], TResult = any> extends DisposableHost {
     private readonly _callback: Func<TArgs, Promise<TResult> | TResult>;
     private readonly _options: DebouncerOptions;
     private _timeoutSource: TimeoutSource;

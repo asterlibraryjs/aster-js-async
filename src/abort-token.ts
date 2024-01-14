@@ -1,4 +1,4 @@
-import { Disposable, DisposedError } from "@aster-js/core";
+import { DisposableHost, DisposedError } from "@aster-js/core";
 import { Deferred } from "./deferred";
 
 const NO_VALUE = Symbol();
@@ -68,7 +68,7 @@ class ReadOnlyAbortToken implements AbortToken {
     }
 }
 
-export class AbortableToken extends Disposable implements AbortToken {
+export class AbortableToken extends DisposableHost implements AbortToken {
     private readonly _listeners: (AbortListenerDelegate | Deferred | AbortableToken)[] = [];
     private _controller?: AbortController = new AbortController();
     private _abortReason: any = NO_VALUE;
