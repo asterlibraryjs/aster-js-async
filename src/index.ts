@@ -8,3 +8,4 @@ export * from "./task";
 export * from "./task-controller";
 export * from "./task-queue";
 export * from "./task-handlers";
+export * from "./promise-settled";
